@@ -9,7 +9,7 @@ from os.path import isfile, join
 
 
 musicfiles = ['./music/' + f for f in listdir('./music') if isfile(join('./music', f))]
-random.shuffle(musicfiles)
+#random.shuffle(musicfiles)
 #musicfiles=['./music/above-the-clouds.mp3']
 
 print(musicfiles)
@@ -83,7 +83,7 @@ class SongProcessor:
         self.spectrogram = librosa.amplitude_to_db(stft, ref=np.max)  # converting the matrix to decibel matrix
         
         self.frequencies = librosa.core.fft_frequencies(n_fft=2048*4)  # getting an array of frequencies
-
+     
 
         # getting an array of time periodic
         self.times = librosa.core.frames_to_time(np.arange(self.spectrogram.shape[1]), sr=sample_rate, hop_length=512, n_fft=2048*4)

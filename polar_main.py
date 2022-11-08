@@ -45,6 +45,9 @@ class AudioBar:
         self.x, self.y, self.freq = x, y, freq
 
         self.color = color
+        self.color_list=[
+            (255,0,0),(200,0,0),(255,255,0),(0,255,0),(0,128,0),(0,255,255),(0,128,128)
+        ]
 
         self.width, self.min_height, self.max_height = width, min_height, max_height
 
@@ -57,21 +60,27 @@ class AudioBar:
     def update(self, dt, decibel):
 
         desired_height = decibel * self.__decibel_height_ratio + self.max_height
-
         speed = (desired_height - self.height)/0.1
 
-        self.height += speed * dt
-
-        self.height = clamp(self.min_height, self.max_height, self.height)
+        self.height =decibel*7
+        #self.height = clamp(self.min_height, self.max_height, self.height)
 
     def render(self, screen):
-        center_y=self.max_height
-        center_x=center_y
-        radius=self.y 
-        theta=self.x*math.pi/180.0
-        x=radius * math.cos(theta) + center_x
-        y=radius * math.sin(theta) + center_y
-        pygame.draw.line(screen,self.color,(center_x,center_y),(x,y),3)
+        center_y=self.max_height+50
+        center_x=450
+        radius=self.height+50
+        if (self.height < 10):
+            return
+        radius=clamp(50,400,radius)
+        theta=(self.x*math.pi/180)%360
+        start_x=20 * math.cos(theta) + center_x
+        start_y=20 * math.sin(theta) + center_y
+        end_x=radius * math.cos(theta) + center_x
+        end_y=radius * math.sin(theta) + center_y
+        color_idx=int((self.x/360)%len(self.color_list))
+        #print(int((self.x/360)%9))
+        curr_color = self.color_list[color_idx]
+        pygame.draw.line(screen,curr_color,(start_x,start_y),(end_x,end_y),3)
         #pygameself.x, self.y + self.max_height - self.height, self.width, self.heigh.draw.rect(screen, self.color, (t))
 
 
@@ -83,11 +92,11 @@ class SongProcessor:
         time_series, sample_rate = librosa.load(self.filename)  # getting information from the file
 
         # getting a matrix which contains amplitude values according to frequency and time indexes
-        stft = np.abs(librosa.stft(time_series, hop_length=512, n_fft=2048*4))
+        stft = np.abs(librosa.stft(time_series, hop_length=128, n_fft=512*4))
    
         self.spectrogram = librosa.amplitude_to_db(stft, ref=np.max)  # converting the matrix to decibel matrix
         
-        self.frequencies = librosa.core.fft_frequencies(n_fft=2048*4)  # getting an array of frequencies
+        self.frequencies = librosa.core.fft_frequencies(n_fft=512*4)  # getting an array of frequencies
 
 
         # getting an array of time periodic
@@ -112,17 +121,16 @@ class SongProcessor:
 
     def get_decibel(self,target_time, freq):
         freq_idx=min(int(freq * self.frequencies_index_ratio),self.spectrogram.shape[0]-1)
-
+        #print(freq, self.spectrogram[freq_idx][int(target_time * self.time_index_ratio)])
         return self.spectrogram[freq_idx][int(target_time * self.time_index_ratio)]
 
 
     def play_song(self,width,x):
         
         x=0
-        width=360/len(self.frequencies)
+        width=2880/len(self.frequencies)
         print("Play song", width,x,len(self.frequencies))
         for c in self.frequencies:
-            print(c)
             bars.append(AudioBar(x, 300, c, background_color, max_height=400, width=width))
             x += width
         pygame.mixer.music.load(self.filename)
@@ -143,8 +151,8 @@ pygame.init()
 
 infoObject = pygame.display.Info()
 
-screen_w = int(infoObject.current_w/2.5)
-screen_h = int(infoObject.current_w/2.5)
+screen_w = 900
+screen_h = 900
 
 # Set up the drawing window
 screen = pygame.display.set_mode([screen_w, screen_h])
@@ -173,7 +181,7 @@ sp.play_song(ang_width,ang)
 
 text = font.render(sp.caption, True, background_color, foreground_color)
 textRect = text.get_rect()
-textRect.center = (screen_w // 2,screen_h // 2+32)
+textRect.center = (screen_w // 2,screen_h -26)
 
 
 # Run until the user asks to quit
@@ -207,9 +215,9 @@ while running:
 
     # Fill the background with white
     screen.fill(foreground_color)
-
+    
     for b in bars:
-        print(sp.get_decibel(pygame.mixer.music.get_pos()/1000.0,b.freq))
+        #print(sp.get_decibel(pygame.mixer.music.get_pos()/1000.0,b.freq))
         b.update(deltaTime, sp.get_decibel(pygame.mixer.music.get_pos()/1000.0, b.freq)+80)
         b.render(screen)
     screen.blit(text, textRect)
