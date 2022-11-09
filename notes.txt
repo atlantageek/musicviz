@@ -86,3 +86,7 @@ https://stackoverflow.com/questions/24961127/how-to-create-a-video-from-images-w
 
 Music site
 https://www.free-stock-music.com/lo-fi.html
+
+
+ffmpeg -f pulse -ac 2 -i default -f x11grab -framerate 25     $(xwininfo | gawk 'match($0, /-geometry ([0-9]+x[0-9]+).([0-9]+).([0-9]+)/, a)\
+      { print "-video_size " a[1] " -i +" a[2] "," a[3] }')     $(date +%Y-%m-%d_%H-%M_%S).mp4

@@ -40,16 +40,16 @@ def clamp(min_value, max_value, value):
 
 class AudioBar:
 
-    def __init__(self, x, y, freq, color, width=50, min_height=10, max_height=100, min_decibel=-80, max_decibel=0):
+    def __init__(self, ang_pos, y, freq, color, ang_width=50, min_height=10, max_height=100, min_decibel=-80, max_decibel=0):
         #print(x,y)
-        self.x, self.y, self.freq = x, y, freq
+        self.ang_pos, self.y, self.freq = ang_pos, y, freq
 
         self.color = color
         self.color_list=[
-            (255,0,0),(200,0,0),(255,255,0),(0,255,0),(0,128,0),(0,255,255),(0,128,128)
+            (32,32,192),(128,0,128),(128,128,0),(0,128,0),(0,64,0),(0,128,128),(0,64,64)
         ]
 
-        self.width, self.min_height, self.max_height = width, min_height, max_height
+        self.ang_width, self.min_height, self.max_height = ang_width, min_height, max_height
 
         self.height = min_height
 
@@ -65,24 +65,27 @@ class AudioBar:
         self.height =decibel*7
         #self.height = clamp(self.min_height, self.max_height, self.height)
 
-    def render(self, screen):
+    def render(self, screen,offset):
         center_y=self.max_height+50
-        center_x=450
+        center_x=600
         radius=self.height+50
         if (self.height < 10):
             return
         radius=clamp(50,400,radius)
-        theta=(self.x*math.pi/180)%360
-        start_x=20 * math.cos(theta) + center_x
-        start_y=20 * math.sin(theta) + center_y
-        end_x=radius * math.cos(theta) + center_x
-        end_y=radius * math.sin(theta) + center_y
-        color_idx=int((self.x/360)%len(self.color_list))
-        #print(int((self.x/360)%9))
+        theta1=((self.ang_pos + offset)*math.pi/180)%360
+        theta2=((self.ang_pos+ang_width + offset)*math.pi/180)%360
+        start_x1=20 * math.cos(theta1) + center_x
+        start_y1=20 * math.sin(theta1) + center_y
+        end_x1=radius * math.cos(theta1) + center_x
+        end_y1=radius * math.sin(theta1) + center_y
+        start_x2=20 * math.cos(theta2) + center_x
+        start_y2=20 * math.sin(theta2) + center_y
+        end_x2=radius * math.cos(theta2) + center_x
+        end_y2=radius * math.sin(theta2) + center_y
+        color_idx=int((self.ang_pos/360)%len(self.color_list))
         curr_color = self.color_list[color_idx]
-        pygame.draw.line(screen,curr_color,(start_x,start_y),(end_x,end_y),3)
-        #pygameself.x, self.y + self.max_height - self.height, self.width, self.heigh.draw.rect(screen, self.color, (t))
-
+        pygame.draw.polygon(screen,curr_color,((start_x1,start_y1),(end_x1,end_y1),(end_x2,end_y2),(start_x2,start_y2)),0)
+        
 
 
 class SongProcessor:
@@ -128,17 +131,18 @@ class SongProcessor:
     def play_song(self,width,x):
         
         x=0
-        width=2880/len(self.frequencies)
+        width=15#2880/len(self.frequencies)
         print("Play song", width,x,len(self.frequencies))
         for c in self.frequencies:
-            bars.append(AudioBar(x, 300, c, background_color, max_height=400, width=width))
-            x += width
+            bars.append(AudioBar(x, 300, c, background_color, max_height=400, ang_width=width))
+            x += ang_width
         pygame.mixer.music.load(self.filename)
         pygame.mixer.music.play(0)
 def reset():
     bars = []
-    frequencies = np.arange(100, 8000, 100)
+    frequencies = np.arange(100, 7300, 100)
     r = len(frequencies)
+    screen.fill(foreground_color)
 
 
 
@@ -151,7 +155,7 @@ pygame.init()
 
 infoObject = pygame.display.Info()
 
-screen_w = 900
+screen_w = 1200
 screen_h = 900
 
 # Set up the drawing window
@@ -161,7 +165,7 @@ screen = pygame.display.set_mode([screen_w, screen_h])
 bars = []
 
 
-frequencies = np.arange(100, 8000, 100)
+frequencies = np.arange(100, 7300, 100)
 
 r = len(frequencies)
 
@@ -186,6 +190,7 @@ textRect.center = (screen_w // 2,screen_h -26)
 
 # Run until the user asks to quit
 running = True
+offset=0
 while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -218,8 +223,9 @@ while running:
     
     for b in bars:
         #print(sp.get_decibel(pygame.mixer.music.get_pos()/1000.0,b.freq))
+        offset += 0.0001
         b.update(deltaTime, sp.get_decibel(pygame.mixer.music.get_pos()/1000.0, b.freq)+80)
-        b.render(screen)
+        b.render(screen,offset)
     screen.blit(text, textRect)
     # Flip the display
     pygame.display.flip()
