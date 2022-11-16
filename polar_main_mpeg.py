@@ -6,8 +6,7 @@ import librosa
 import math
 
 x = np.linspace(-2, 2, 200)
-
-duration = 200
+mp3="music/above-the-clouds.mp3"
 math.radians(40)
 #preprocess-mp3
 WHITE = (255, 255, 255)
@@ -37,7 +36,7 @@ class SongProcessor:
         self.time_series, self.sample_rate = librosa.load(self.filename)  # getting information from the file
 
         # getting a matrix which contains amplitude values according to frequency and time indexes
-        stft = librosa.stft(self.time_series)
+        stft = librosa.stft(self.time_series, hop_length=128, n_fft=512*4)
         self.magnitude,phase=librosa.magphase(stft)
         
         self.duration=librosa.get_duration(y=self.time_series, sr=self.sample_rate)#y=self.time_series, sr=self.sample_rate)
@@ -48,7 +47,7 @@ class SongProcessor:
 
 
         # getting an array of time periodic
-        self.times = librosa.core.frames_to_time(np.arange(self.spectrogram.shape[1]), sr=self.sample_rate, hop_length=512, n_fft=2048*4)
+        self.times = librosa.core.frames_to_time(np.arange(self.spectrogram.shape[1]), sr=self.sample_rate, hop_length=128, n_fft=512*4)
 
         self.time_index_ratio = len(self.times)/self.times[len(self.times) - 1]
 
@@ -62,8 +61,9 @@ class SongProcessor:
         # print(self.frequencies_index_ratio)
         # print(self.stft[1024,0])
         max_val = np.amax(self.magnitude)
-        self.multiplier=250.0/max_val
+        self.multiplier=3#250.0/max_val
         print(self.duration)
+        
         print(self.times)
         print(self.get_index_for_time(33))
      
@@ -78,7 +78,7 @@ class SongProcessor:
 
     def get_levels(self,target_time):
         idx=self.get_index_for_time(target_time)
-        return self.spectrogram[:,idx]
+        return self.spectrogram[:,idx]+80
 
 
     def play_song(self,width,x):
@@ -90,7 +90,7 @@ class SongProcessor:
         #     bars.append(AudioBar(x, 300, c, background_color, max_height=400, ang_width=width))
         #     x += ang_width
 
-sp=SongProcessor('music/above-the-clouds.mp3')
+sp=SongProcessor(mp3)
 
 def draw_level(ang,level,idx,draw):
     pt1=(CENTER_X,CENTER_Y)
@@ -103,15 +103,16 @@ def draw_level(ang,level,idx,draw):
     pt3=(math.cos(theta2) *level * sp.multiplier + CENTER_X, math.sin(theta2) * level * sp.multiplier + CENTER_Y)
     #print(math.cos(math.radians(theta1)) *level)
     #if (idx % 100 == 34):
-    #print(idx,theta1,mod_ang,bs)
+    #print(level,idx,theta1,mod_ang,bs)
     color_idx=int(ang/360)
     color=COLOR_LIST[color_idx]
-    draw.polygon((pt1,pt2,pt3),fill=color)
+    draw.polygon((pt1,pt2,pt3,pt1),fill=color)
 
 def make_frame(t):
     im=Image.new("RGB",(854,580),BACKGROUND)
     draw=ImageDraw.Draw(im)
     levels=sp.get_levels(t)
+    #print(np.amax(levels))
 
     ang=0
     for idx,level in enumerate(levels):
@@ -130,11 +131,11 @@ def make_frame(t):
 #     draw.polygon(((100, t), (300,t),(300,300+t),(100,300+t)), fill=128)
 #     return np.array(im)
     
-audio=AudioFileClip("music/above-the-clouds.mp3").set_duration(duration)
-
+audio=AudioFileClip(mp3).set_duration(sp.duration)
+print(sp.times)
 # #make_audio_frame = lambda t: 2*[ np.sin(440 * 2 * np.pi * t) ]
 # #audio = AudioClip(make_audio_frame, duration=12)
-animation = VideoClip(make_frame, duration=duration).set_fps(20)
+animation = VideoClip(make_frame, duration=sp.duration).set_fps(20)
 # #animation.write_videofile('matplotlib.mp4', fps=20, codec='libx264',audio_codec='aac', temp_audiofile='music/above-the-clouds.mp3', remove_temp=True)
 animation = animation.set_audio(audio)
 animation.write_videofile('above-the-clouds.mp4', fps=20)
