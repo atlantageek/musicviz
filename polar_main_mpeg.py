@@ -1,12 +1,20 @@
 from PIL import Image,ImageDraw
+from pathlib import Path
+import sys
 import numpy as np
 from moviepy.editor import *
 from moviepy.video.io.bindings import mplfig_to_npimage
 import librosa
 import math
-
+durration_override=30
+if (len(sys.argv) != 2):
+    print("Filename required")
+    exit(1)
+mp3=sys.argv[1]
+outfile = 'mpegs/' + Path(sys.argv[1]).stem + '.mp4'
+print(outfile)
 x = np.linspace(-2, 2, 200)
-mp3="music/above-the-clouds.mp3"
+
 math.radians(40)
 #preprocess-mp3
 WHITE = (255, 255, 255)
@@ -52,6 +60,7 @@ class SongProcessor:
         self.time_index_ratio = len(self.times)/self.times[len(self.times) - 1]
 
         self.frequencies_index_ratio = len(self.frequencies)/self.frequencies[len(self.frequencies)-1]
+        self.tempo,self.beats = librosa.beat.beat_track(y=self.time_series,sr=self.sample_rate)
         print(self.time_series.shape)
         print(stft.shape)
         print(self.times.shape)
@@ -63,10 +72,9 @@ class SongProcessor:
         max_val = np.amax(self.magnitude)
         self.multiplier=3#250.0/max_val
         print(self.duration)
-        
-        print(self.times)
-        print(self.get_index_for_time(33))
-     
+        print("BEATS")
+        print(self.beats)
+        print(self.tempo)
         print("Finish Analyzing")
 
     
@@ -108,13 +116,30 @@ def draw_level(ang,level,idx,draw):
     color=COLOR_LIST[color_idx]
     draw.polygon((pt1,pt2,pt3,pt1),fill=color)
 
+def draw_beats(t,draw):
+    frame_idx=sp.get_index_for_time(t)
+    beat_idx=0
+    draw.ellipse((10,CENTER_Y,10+10,CENTER_Y+10),fill=(255, 0, 0), outline=(0, 0, 0))
+    while  beat_idx < len(sp.beats) and sp.beats[beat_idx] < frame_idx :
+        horz_pos=0
+        horz_pos= frame_idx - sp.beats[beat_idx]
+        
+        if (horz_pos > 0 and horz_pos < SCREEN_WIDTH):
+            #print(horz_pos, frame_idx,sp.beats[beat_idx],SCREEN_WIDTH)
+            draw.ellipse((horz_pos,CENTER_Y,horz_pos+10,CENTER_Y+10),fill=(255, 0, 0), outline=(0, 0, 0))
+        beat_idx+=1
+
+
+
 def make_frame(t):
     im=Image.new("RGB",(854,580),BACKGROUND)
     draw=ImageDraw.Draw(im)
     levels=sp.get_levels(t)
+
     #print(np.amax(levels))
 
     ang=0
+    #draw_beats(t,draw)
     for idx,level in enumerate(levels):
         draw_level(ang,level,idx,draw)
         ang=ang+ANG_STEP
@@ -138,4 +163,4 @@ print(sp.times)
 animation = VideoClip(make_frame, duration=sp.duration).set_fps(20)
 # #animation.write_videofile('matplotlib.mp4', fps=20, codec='libx264',audio_codec='aac', temp_audiofile='music/above-the-clouds.mp3', remove_temp=True)
 animation = animation.set_audio(audio)
-animation.write_videofile('above-the-clouds.mp4', fps=20)
+animation.write_videofile(outfile, fps=20)
